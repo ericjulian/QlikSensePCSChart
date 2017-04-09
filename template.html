@@ -1,0 +1,7 @@
+<div qv-extension style="height: 100%; position: relative; overflow: auto;" class="ng-scope">
+	<lui-select ng-model="fieldList.model">
+		<option ng-repeat="row in fieldList.qFieldList.qItems" value="{{row.qName}}">{{row.qName}}</option>
+	</lui-select>
+	<lui-button ng-click="loadField(fieldList.model);">Load</lui-button>
+	<div id="chart_div"></div>
+</div>
