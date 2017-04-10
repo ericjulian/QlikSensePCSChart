@@ -28,18 +28,20 @@ define(["./propertyUtils"], function (propUtil) {
 	/* General chart options */
 	var curveSmoothing = propUtil.createSwitch ("curveSmoothing", "Curve Smoothing", false);
 	var controlField = propUtil.createField("controlField", "Control Field", "string", "optional","");
-	var displayAverage = propUtil.createSwitch ("displayAverage", "Display Average", false);
-	var displayOneStdDev = propUtil.createSwitch ("displayOneStdDev", "Display One Std Dev", false);
-	var displayTwoStdDev = propUtil.createSwitch ("displayTwoStdDev", "Display Two Std Dev", false);
-	var displayThreeStdDev = propUtil.createSwitch ("displayThreeStdDev", "Display Three Std Dev", false);
+	var minorGridlineColor = propUtil.createField("minorGridlineColor", "Gridline Color", "string", "optional","#999999");
+	//var displayAverage = propUtil.createSwitch ("displayAverage", "Display Average", false);
+	//var displayOneStdDev = propUtil.createSwitch ("displayOneStdDev", "Display One Std Dev", false);
+	//var displayTwoStdDev = propUtil.createSwitch ("displayTwoStdDev", "Display Two Std Dev", false);
+	//var displayThreeStdDev = propUtil.createSwitch ("displayThreeStdDev", "Display Three Std Dev", false);
 	/* Create item panel */
 	var configItems = propUtil.createItem("items", "Chart Configuration");
 	configItems.items["ConfigCurveSmoothing"] = curveSmoothing;
 	configItems.items["ConfigControlField"] = controlField;
-	configItems.items["ConfigDisplayAverage"] = displayAverage;
-	configItems.items["ConfigDisplayOneStdDev"] = displayOneStdDev;
-	configItems.items["ConfigDisplayTwoStdDev"] = displayTwoStdDev;
-	configItems.items["ConfigDisplayThreeStdDev"] = displayThreeStdDev;
+	configItems.items["ConfigGridlineColorField"] = minorGridlineColor;
+	//configItems.items["ConfigDisplayAverage"] = displayAverage;
+	//configItems.items["ConfigDisplayOneStdDev"] = displayOneStdDev;
+	//configItems.items["ConfigDisplayTwoStdDev"] = displayTwoStdDev;
+	//configItems.items["ConfigDisplayThreeStdDev"] = displayThreeStdDev;
 
 	/* Point Options */
 	var pointShape = propUtil.createDropDown ('qDef.pointShape', "Point Shape", "string", pointShapeOptionsArray, '');
@@ -64,46 +66,6 @@ define(["./propertyUtils"], function (propUtil) {
 	lineItems.items["LineColorProp"] = lineColor;
 	lineItems.items["LineThicknessProp"] = lineThickness;
 
-	/* Average Line Configuration */
-	var averageLineStyle = propUtil.createField("averageLineStyle", "Line Style", "string", "optional", "10,2");
-	var averageLineColor = propUtil.createField("averageLineColor", "Line Color", "string", "optional", "#999999");
-	var averageLineThickness = propUtil.createField("averageLineThickness", "Line Thickness", "integer", "optional", 2);
-	/* Create item panel */
-	var averageItems = propUtil.createItem("items", "Average");
-	averageItems.items["AverageLineStyleProp"] = averageLineStyle;
-	averageItems.items["AverageLineColorProp"] = averageLineColor;
-	averageItems.items["AverageLineThicknessProp"] = averageLineThickness;
-
-	/* One Standard Dev Line and Point Options */
-	var oneStdDevLineStyle = propUtil.createField("oneStdDevLineStyle", "Line Style", "string", "optional", "10,2");
-	var oneStdDevLineColor = propUtil.createField("oneStdDevLineColor", "Line Color", "string", "optional", "#999999");
-	var oneStdDevLineThickness = propUtil.createField("oneStdDevLineThickness", "Line Thickness", "integer", "optional", 2);
-	/* Create item panel */
-	var oneStdDevItems = propUtil.createItem("items", "One Standard Deviation");
-	oneStdDevItems.items["OneStdDevLineStyleProp"] = oneStdDevLineStyle;
-	oneStdDevItems.items["OneStdDevLineColorProp"] = oneStdDevLineColor;
-	oneStdDevItems.items["OneStdDevLineThicknessProp"] = oneStdDevLineThickness;
-
-	/* Two Standard Dev Line and Point Options */
-	var twoStdDevLineStyle = propUtil.createField("twoStdDevLineStyle", "Line Style", "string", "optional", "10,2");
-	var twoStdDevLineColor = propUtil.createField("twoStdDevLineColor", "Line Color", "string", "optional", "#999999");
-	var twoStdDevLineThickness = propUtil.createField("twoStdDevLineThickness", "Line Thickness", "integer", "optional", 2);
-	/* Create item panel */
-	var twoStdDevItems = propUtil.createItem("items", "Two Standard Deviation");
-	twoStdDevItems.items["TwoStdDevLineStyleProp"] = twoStdDevLineStyle;
-	twoStdDevItems.items["TwoStdDevLineColorProp"] = twoStdDevLineColor;
-	twoStdDevItems.items["TwoStdDevLineThicknessProp"] = twoStdDevLineThickness;
-
-	/* Three Standard Dev Line and Point Options */
-	var threeStdDevLineStyle = propUtil.createField("threeStdDevLineStyle", "Line Style", "string", "optional", "10,2");
-	var threeStdDevLineColor = propUtil.createField("threeStdDevLineColor", "Line Color", "string", "optional", "#999999");
-	var threeStdDevLineThickness = propUtil.createField("threeStdDevLineThickness", "Line Thickness", "integer", "optional", 2);
-	/* Create item panel */
-	var threeStdDevItems = propUtil.createItem("items", "Three Standard Deviation");
-	threeStdDevItems.items["ThreeStdDevLineStyleProp"] = threeStdDevLineStyle;
-	threeStdDevItems.items["ThreeStdDevLineColorProp"] = threeStdDevLineColor;
-	threeStdDevItems.items["ThreeStdDevLineThicknessProp"] = threeStdDevLineThickness;
-
 	/* Out of Control Signals */
 	var singlePointOutsideUCLLCL = propUtil.createSwitch ("singlePointOutsideUCLLCL", "A single point outside the control limits.", false);
 	var twoOfThreeSuccessivePoints = propUtil.createSwitch ("twoOfThreeSuccessivePoints", "Two out of three successive points are on the same side of the centerline and farther than 2 σ from it.", false);
@@ -127,10 +89,6 @@ define(["./propertyUtils"], function (propUtil) {
         uses: "settings",
 		items: {
 			GeneralChartOptions: configItems,
-			AverageOptions: averageItems,
-			OneStdDevOptions: oneStdDevItems,
-			TwoStdDevOptions: twoStdDevItems,
-			ThreeStdDevOptions: threeStdDevItems,
 			OutOfControlSignalOptions: outOfControlItems
 		}
     };
@@ -152,7 +110,7 @@ define(["./propertyUtils"], function (propUtil) {
 			measures: {
 				uses: "measures",
 				min: 1,
-				max: 10,
+				max: 1,
 				items: {
 					PointOptions: pointItems,
 					LineOptions: lineItems

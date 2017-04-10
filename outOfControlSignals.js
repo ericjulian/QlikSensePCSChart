@@ -3,6 +3,17 @@
 define([], function () {
     "use strict";
     return {
+        getOutOfControlPoints: function (layout, controlValues, dataArray) {
+            var points = [];
+            if (layout.singlePointOutsideUCLLCL === true) {
+                points = this.determineSinglePointOutOfControl(controlValues, dataArray);
+            }
+            if (layout.determineTwoOfThreePointsOutOfControl === true) {
+                points = points.concat(this.determineTwoOfThreePointsOutOfControl(controlValues, dataArray));
+            }
+
+            return points;
+        },
         /*
             This is for the first type of out of control where a point is outside of the UCL/LCL.
 
@@ -12,23 +23,21 @@ define([], function () {
             Four out of five successive points are on the same side of the centerline and farther than 1 σ from it.
             A run of eight in a row are on the same side of the centerline. Or 10 out of 11, 12 out of 14 or 16 out of 20.
         */
-        determineSinglePointOutOfControl : function (controlValues, dataArray, styleArrayIndexes) {
+        determineSinglePointOutOfControl : function (controlValues, dataArray) {
             "use strict";
             var arrayLength = dataArray.length;
-            var indexes = styleArrayIndexes.length;
             var pointsToColor = [];
+            var styleIndex = 2;
 
             for (var i = 0; i < arrayLength; i++) {
-                for (var j = 0; j < indexes; j++) {
-                    if (dataArray[i][styleArrayIndexes[j] - 1] < controlValues.ThreeStdDevLower) {
-                        pointsToColor.push(this.colorPointObj(i, styleArrayIndexes[j], false, true));
-                    }
-                    if (dataArray[i][styleArrayIndexes[j] - 1] > controlValues.ThreeStdDevUpper) {
-                        pointsToColor.push(this.colorPointObj(i, styleArrayIndexes[j], true, false));
-                    }
+                if (dataArray[i][styleIndex-1] < controlValues.ThreeStdDevLower) {
+                    pointsToColor.push(this.colorPointObj(i, styleIndex, false, true));
+                }
+                if (dataArray[i][styleIndex-1] > controlValues.ThreeStdDevUpper) {
+                    pointsToColor.push(this.colorPointObj(i, styleIndex, true, false));
                 }
             }
-
+            
             return pointsToColor;
         },
         /*
@@ -37,55 +46,52 @@ define([], function () {
             Four out of five successive points are on the same side of the centerline and farther than 1 σ from it.
             A run of eight in a row are on the same side of the centerline. Or 10 out of 11, 12 out of 14 or 16 out of 20.
         */
-        determineTwoOfThreePointsOutOfControl: function (controlValues, dataArray, styleArrayIndexes) {
+        determineTwoOfThreePointsOutOfControl: function (controlValues, dataArray) {
             "use strict";
             var arrayLength = dataArray.length;
-            var indexes = styleArrayIndexes.length;
             var pointsQueue = [];
             var runningTotalUpper = 0;
             var runningTotalLower = 0;
             var pointsToColor = [];
+            var styleIndex = 2;
 
             for (var i = 0; i < arrayLength; i++) {
-                for (var j = 0; j < indexes; j++) {
+                if (dataArray[i][styleIndex - 1] > controlValues.Average && dataArray[i][styleIndex - 1] > controlValues.TwoStdDevUpper) {
+                    // greater than average and further than 2 STD from it.
+                    pointsQueue.push(this.colorPointObj(i, styleIndex, true, false));
+                    runningTotalUpper++;
+                }
+                else if (dataArray[i][styleIndex - 1] < controlValues.Average && dataArray[i][styleIndex - 1] < controlValues.TwoStdDevUpper) {
+                    // less than average and further than 2 STD from it.
+                    pointsQueue.push(this.colorPointObj(i, styleIndex, false, true));
+                    runningTotalLower++;
+                }
+                else {
+                    pointsQueue.push(this.colorPointObj(i, styleIndex, false, false));
+                }
 
-                    if (dataArray[i][styleArrayIndexes[j] - 1] > controlValues.Average && dataArray[i][styleArrayIndexes[j] - 1] > controlValues.TwoStdDevUpper) {
-                        // greater than average and further than 2 STD from it.
-                        pointsQueue.push(this.colorPointObj(i, styleArrayIndexes[j], true, false));
-                        runningTotalUpper++;
+                // eval points
+                if (runningTotalUpper > 1 || runningTotalLower > 1) {
+                    for (var k = 0; k < pointsQueue.length; k++) {
+                        pointsToColor.push(pointsQueue[0]);
+                        pointsToColor.push(pointsQueue[1]);
+                        pointsToColor.push(pointsQueue[2]);
                     }
-                    else if (dataArray[i][styleArrayIndexes[j] - 1] < controlValues.Average && dataArray[i][styleArrayIndexes[j] - 1] < controlValues.TwoStdDevUpper) {
-                        // less than average and further than 2 STD from it.
-                        pointsQueue.push(this.colorPointObj(i, styleArrayIndexes[j], false, true));
-                        runningTotalLower++;
-                    }
-                    else {
-                        pointsQueue.push(this.colorPointObj(i, styleArrayIndexes[j], false, false));
-                    }
+                }
 
-                    // eval points
-                    if (runningTotalUpper > 1 || runningTotalLower > 1) {
-                        for (var k = 0; k < pointsQueue.length; k++) {
-                            pointsToColor.push(pointsQueue[0]);
-                            pointsToColor.push(pointsQueue[1]);
-                            pointsToColor.push(pointsQueue[2]);
-                        }
-                    }
-
-                    // Pop the queue
-                    var popped = pointsQueue.pop();
-                    if (popped.outOfControlUpper) {
-                        runningTotalUpper--;
-                    }
-                    if (popped.outOfControlLower) {
-                        runningTotalLower--;
-                    }
+                // Pop the queue
+                var popped = pointsQueue.pop();
+                if (popped.outOfControlUpper) {
+                    runningTotalUpper--;
+                }
+                if (popped.outOfControlLower) {
+                    runningTotalLower--;
                 }
             }
         },
-        colorPoints: function (dataArray, outOfControlPoints, oocPointColr) {
+        colorPoints: function (dataArray, outOfControlPoints, oocPointColor) {
             var arrayLength = outOfControlPoints.length;
-            var pointStyle = "point { fill-color: " + oocPointColr + "; }";
+            var pointStyle = "point { fill-color: " + oocPointColor + "; }";
             for (var i = 0; i < arrayLength; i++) {
                 dataArray[outOfControlPoints[i].dataIndex][outOfControlPoints[i].styleIndex] = pointStyle;
             }
