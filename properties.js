@@ -69,7 +69,7 @@ define(["./propertyUtils"], function (propUtil) {
 	/* Out of Control Signals */
 	var singlePointOutsideUCLLCL = propUtil.createSwitch ("singlePointOutsideUCLLCL", "A single point outside the control limits.", false);
 	var twoOfThreeSuccessivePoints = propUtil.createSwitch ("twoOfThreeSuccessivePoints", "Two out of three successive points are on the same side of the centerline and farther than 2 σ from it.", false);
-	var fourOutOfFiveOnSameSideFurtherThan2StdDev = propUtil.createSwitch ("fourOutOfFiveOnSameSideFurtherThan2StdDev", "Four out of five successive points are on the same side of the centerline and farther than 1 σ from it.", false);
+	var fourOutOfFivePoints = propUtil.createSwitch ("fourOutOfFivePoints", "Four out of five successive points are on the same side of the centerline and farther than 1 σ from it.", false);
 	var eightInARowONSameSideOfCenter = propUtil.createSwitch ("eightInARowONSameSideOfCenter", "A run of eight in a row are on the same side of the centerline. Or 10 out of 11, 12 out of 14 or 16 out of 20.", false);
 	var outOfControlPointColor = propUtil.createField("outOfControlPointColor", "Point Color", "string", "optional", "#ff0000");
 	var outOfControlPointShape = propUtil.createDropDown ("outOfControlPointShape", "Point Shape", "string", pointShapeOptionsArray, 'circle');
@@ -79,7 +79,7 @@ define(["./propertyUtils"], function (propUtil) {
 	outOfControlItems.items["OutOfControlPointShapeProp"] = outOfControlPointShape;
 	outOfControlItems.items["SinglePointOutsideUCLLCLProp"] = singlePointOutsideUCLLCL;
 	outOfControlItems.items["TwoOfThreeSuccessivePointsProp"] = twoOfThreeSuccessivePoints;
-	outOfControlItems.items["FourOutOfFiveOnSameSideFurtherThan2StdDevProp"] = fourOutOfFiveOnSameSideFurtherThan2StdDev;
+	outOfControlItems.items["fourOutOfFivePointsProp"] = fourOutOfFivePoints;
 	outOfControlItems.items["EightInARowONSameSideOfCenterProp"] = eightInARowONSameSideOfCenter;
 
     // *****************************************************************************

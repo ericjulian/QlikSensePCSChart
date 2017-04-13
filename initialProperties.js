@@ -28,12 +28,17 @@ define([], function () {
 			qDimensions: [],
 			qMeasures: [{
 				qDef: {
-					qDef: "=Stdev()"
+					qDef: "=Stdev(total aggr(avg({{controlField}}), {{dimension}}))"
 				}
 			},
 			{
 				qDef: {
-					qDef: "=Avg()"
+					qDef: "=Avg({{controlField}})"
+				}
+			},
+			{
+				qDef: {
+					qDef: "=AVG(Max({{controlField}}) - Min({{controlField}}))" // Average Range
 				}
 			}],
 			qInitialDataFetch: [{
@@ -43,9 +48,10 @@ define([], function () {
 				qWidth: 2
 			}]
 		}
-		,setControlCubeField : function(cube, field) {
-			cube.qMeasures[0].qDef.qDef = "=Stdev(" + field + ")";
-			cube.qMeasures[1].qDef.qDef = "=Avg(" + field + ")";
+		,setControlCubeField : function(cube, controlField, dimension) {
+			cube.qMeasures[0].qDef.qDef = cube.qMeasures[0].qDef.qDef.replace("{{controlField}}", controlField);
+			cube.qMeasures[0].qDef.qDef = cube.qMeasures[0].qDef.qDef.replace("{{dimension}}", dimension);
+			cube.qMeasures[1].qDef.qDef = cube.qMeasures[1].qDef.qDef.replace("{{controlField}}", controlField);
 			return cube;
 		}
     };

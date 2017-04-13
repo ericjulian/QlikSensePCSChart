@@ -1,7 +1,12 @@
 <div qv-extension style="height: 100%; position: relative; overflow: auto;" class="ng-scope">
-	<lui-select ng-model="fieldList.model">
-		<option ng-repeat="row in fieldList.qFieldList.qItems" value="{{row.qName}}">{{row.qName}}</option>
-	</lui-select>
-	<lui-button ng-click="loadField(fieldList.model);">Load</lui-button>
-	<div id="chart_div"></div>
+	<div style="display:flex; height: 100%; border: 1px; border-color: black; border-style: solid;">
+		<div style="width: 150px; border: 1px; border-color: black; border-style: solid;">
+			<label style="font-weight:bold;">Process Control Information</label><br />
+			<span>Mean: {{meanValue}}</span><br />
+			<span>StdDev: {{stdDevValue}}</span><br />
+			<span>UCL: {{uclValue}}</span><br />
+			<span>LCL: {{lclValue}}</span>
+		</div>
+		<div id="chart_div" style="flex-grow: 1;"></div>
+	</div>
 </div>

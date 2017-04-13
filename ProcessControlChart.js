@@ -59,7 +59,7 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 				var controlValues = {};
 
 				// Create the hypercube that will calculate the stddev/average
-				var controlCubeDef = initProperties.setControlCubeField(initProperties.controlLevelCubeDef, $scope.layout.controlField);
+				var controlCubeDef = initProperties.setControlCubeField(initProperties.controlLevelCubeDef, $scope.layout.controlField, dimensionField);
 
 				// Load the Visualization API and the corechart package.
 				google.charts.load("current", {"packages":["corechart"]});
@@ -75,21 +75,6 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 					*/
 					google.charts.setOnLoadCallback(drawChart);
 				});
-
-				/*
-					Get a list of all fields and populate them to a dropdown list
-				*/
-				app.getList("FieldList", function(reply) {
-					console.info("getList fired");
-					$scope.fieldList = {
-						model: null,
-						qFieldList: reply.qFieldList
-					};
-				});
-				
-				$scope.loadField = function(selectedField) {
-					console.info("loadField fired");
-				};
 
 				/*
 					Bind function to the model Validated event which is called when a selection is made.
@@ -141,7 +126,7 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 					/*
 						Color out of control points
 					*/
-					outOfControlSignals.colorPoints (dataArray, outOfControlPoints, controlValues.OOCPointColor);
+					outOfControlSignals.colorPoints (dataArray, outOfControlPoints, controlValues.OOCPointColor, controlValues.OOCPointShape);
 
 					/*
 						Convert the dataArray to a dataTable consumable by Google Charts.
@@ -150,13 +135,15 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 
 					/* 
 						Set chart options
-						The options would be the basis for the custom panel settings in properties.js.
-						The values from set in the properties panel would be set in the options.
-						The title below is an example of tying the panel input to the options.
+						It is important to set the width/height values for the chart and the chart area.
 					*/
 					var options = {
-						"width": 600,
-						"height": 600,
+						chartArea:{
+						//	left:20,
+						//	top: 20,
+							width: "90%",
+						//	height: '350'
+						},
 						series: seriesOptions,
 						vAxes: {
 							0: { 
@@ -204,6 +191,14 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 						var selectedVal = dataTableData.getFormattedValue(item[0].row, 0);
 						app.field(dimensionField).selectValues([{qText:selectedVal}], false, false);
 					}
+
+					/*
+						Set template variables
+					*/
+					$scope.meanValue = (controlValues.Average).toFixed(2);
+					$scope.stdDevValue = controlValues.StdDev.toFixed(2);
+					$scope.uclValue = controlValues.ThreeStdDevUpper.toFixed(2);
+					$scope.lclValue = controlValues.ThreeStdDevLower.toFixed(2);
 
 					console.info("draw end");
 				}
