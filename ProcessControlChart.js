@@ -8,9 +8,7 @@
 	http://eslint.org/demo/
 
 	Known Linting issues which should not impact execution
-	135:10 - 'styleArrayIndexes' is assigned a value but never used. (no-unused-vars)
 	175:34 - 'e' is defined but never used. (no-unused-vars)
-	464:10 - 'colorPointsOutOfControl' is defined but never used. (no-unused-vars)
 
 	These changes have been made but haven't been tested so you could look into this functionality and 
 	fix the problem if it exists.
@@ -32,7 +30,6 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 			console.info(propertiesPanel);
 			console.info(initProperties);
 			console.info(outOfControlSignals);
-
 		*/
 
 		return {
@@ -58,6 +55,9 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 				// Initialize control values object
 				var controlValues = {};
 
+				// Initialize viewport min/max
+				var viewportDims = {};
+
 				// Create the hypercube that will calculate the stddev/average
 				var controlCubeDef = initProperties.setControlCubeField(initProperties.controlLevelCubeDef, $scope.layout.controlField, dimensionField);
 
@@ -68,7 +68,9 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 					console.info("createCube fired");
 					$scope.controlCubeDef = reply;
 					controlValues = createControlValues($scope.layout, $scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][1].qNum, $scope.controlCubeDef .qHyperCube.qDataPages[0].qMatrix[0][0].qNum);
-					yMinorTicks = setTicks($scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][1].qNum, $scope.controlCubeDef .qHyperCube.qDataPages[0].qMatrix[0][0].qNum);
+					yMinorTicks = setTicks($scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][1].qNum, $scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][0].qNum);
+					viewportDims = getMinMaxDataRange(controlValues, $scope.layout.qHyperCube);
+					
 					/*
 						Set a callback to run when the Google Visualization API is loaded.
 						This sets the function that loads the chart initially.
@@ -126,7 +128,7 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 					/*
 						Color out of control points
 					*/
-					outOfControlSignals.colorPoints (dataArray, outOfControlPoints, controlValues.OOCPointColor, controlValues.OOCPointShape);
+					outOfControlSignals.colorPoints (dataArray, outOfControlPoints, controlValues.OOCPointColor, controlValues.OOCPointShape, controlValues.OOCPointSize);
 
 					/*
 						Convert the dataArray to a dataTable consumable by Google Charts.
@@ -139,10 +141,7 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 					*/
 					var options = {
 						chartArea:{
-						//	left:20,
-						//	top: 20,
 							width: "90%",
-						//	height: '350'
 						},
 						series: seriesOptions,
 						vAxes: {
@@ -158,11 +157,12 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 						},
 						vAxis: {
 							viewWindow: {
-								min: 0,
-								max: 150
+								min: viewportDims.minVal,
+								max: viewportDims.maxVal
 							}
 						}
 					};
+					
 					// Set Curve smoothing 
 					if ($scope.layout.curveSmoothing) {
 						options.curveType = "function";
@@ -193,7 +193,7 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 					}
 
 					/*
-						Set template variables
+						Set template.html variables
 					*/
 					$scope.meanValue = (controlValues.Average).toFixed(2);
 					$scope.stdDevValue = controlValues.StdDev.toFixed(2);
@@ -212,6 +212,7 @@ function createControlValues(layout, avg, stdDev) {
 	cv.Field = layout.controlField;
 	cv.OOCPointColor = layout.outOfControlPointColor;
 	cv.OOCPointShape = layout.outOfControlPointShape;
+	cv.OOCPointSize = layout.outOfControlPointSize;
 	cv.StdDev = stdDev;
 	cv.Average = avg;
 	cv.OneStdDevLower = avg - stdDev;
@@ -349,4 +350,40 @@ function createDataArray(dataArray, hyperCube) {
 	}
 
 	return dataArray;
+}
+
+function getMinMaxDataRange(controlValues, hyperCube) {
+	var maxVal = controlValues.ThreeStdDevUpper;
+	var minVal = controlValues.ThreeStdDevLower;
+
+	var dataLen = hyperCube.qDataPages[0].qMatrix.length;
+	var colDataLen = 0;
+	var dataRow = [];
+	var i = 0;
+	var j = 0;
+	for (i = 0; i < dataLen; i+=1) {
+		colDataLen = hyperCube.qDataPages[0].qMatrix[i].length;
+		dataRow = [];
+		for (j = 0; j < colDataLen; j+=1) {
+			/* If qNum is "NaN" and qIsNull is true then push null. */
+			if (hyperCube.qDataPages[0].qMatrix[i][j].qNum === "NaN" && hyperCube.qDataPages[0].qMatrix[i][j].qIsNull === true) {
+			}
+			/* If qNum is "NaN" then we access qText because the value is a string.  Otherwise we access qNum for the number value. */
+			else if (hyperCube.qDataPages[0].qMatrix[i][j].qNum === "NaN") {
+			}
+			else {
+				if (hyperCube.qDataPages[0].qMatrix[i][j].qNum > maxVal) {
+					maxVal = hyperCube.qDataPages[0].qMatrix[i][j].qNum;
+				}
+				else if (hyperCube.qDataPages[0].qMatrix[i][j].qNum < minVal) {
+					minVal = hyperCube.qDataPages[0].qMatrix[i][j].qNum;
+				}
+			}
+		}
+	}
+
+	return {
+		minVal: minVal,
+		maxVal: maxVal
+	}
 }

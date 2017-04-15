@@ -160,9 +160,9 @@ define([], function () {
             }
             return pointsToColor;
         },
-        colorPoints: function (dataArray, outOfControlPoints, oocPointColor, oocPointShape) {
+        colorPoints: function (dataArray, outOfControlPoints, oocPointColor, oocPointShape, oocPointSize) {
             var arrayLength = outOfControlPoints.length;
-            var pointStyle = "point { fill-color: " + oocPointColor + "; shape-type: " + oocPointShape + " }";
+            var pointStyle = "point { fill-color: " + oocPointColor + "; shape-type: " + oocPointShape + "; size: " + oocPointSize + "; }";
             for (var i = 0; i < arrayLength; i++) {
                 dataArray[outOfControlPoints[i].dataIndex][outOfControlPoints[i].styleIndex] = pointStyle;
             }

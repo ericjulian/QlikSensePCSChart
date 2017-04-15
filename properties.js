@@ -73,9 +73,11 @@ define(["./propertyUtils"], function (propUtil) {
 	var eightInARowONSameSideOfCenter = propUtil.createSwitch ("eightInARowONSameSideOfCenter", "A run of eight in a row are on the same side of the centerline. Or 10 out of 11, 12 out of 14 or 16 out of 20.", false);
 	var outOfControlPointColor = propUtil.createField("outOfControlPointColor", "Point Color", "string", "optional", "#ff0000");
 	var outOfControlPointShape = propUtil.createDropDown ("outOfControlPointShape", "Point Shape", "string", pointShapeOptionsArray, 'circle');
+	var outOfControlPointSize = propUtil.createField("outOfControlPointSize", "Point Size", "string", "optional", 7);
 	/* Create item panel */
 	var outOfControlItems = propUtil.createItem("items", "Out-of-control signals");
 	outOfControlItems.items["OutOfControlPointColorProp"] = outOfControlPointColor;
+	outOfControlItems.items["OutOfControlPointSizeProp"] = outOfControlPointSize;
 	outOfControlItems.items["OutOfControlPointShapeProp"] = outOfControlPointShape;
 	outOfControlItems.items["SinglePointOutsideUCLLCLProp"] = singlePointOutsideUCLLCL;
 	outOfControlItems.items["TwoOfThreeSuccessivePointsProp"] = twoOfThreeSuccessivePoints;
