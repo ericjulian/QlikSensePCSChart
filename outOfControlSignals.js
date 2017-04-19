@@ -1,35 +1,36 @@
 /*global define */
 
+/*
+    OOC rules based on https://en.wikipedia.org/wiki/Western_Electric_rules
+*/
 define([], function () {
     "use strict";
     return {
+        /*
+            Rules are activated based on property settings.
+        */
         getOutOfControlPoints: function (layout, controlValues, dataArray) {
             var points = [];
+            // Rule 1
             if (layout.singlePointOutsideUCLLCL === true) {
                 points = this.determineSinglePointOutOfControl(controlValues, dataArray);
             }
-
+            // Rule 2
             if (layout.twoOfThreeSuccessivePoints === true) {
                 points = points.concat(this.determineXOfYPointsOutOfControl(controlValues.Average, dataArray, controlValues.TwoStdDevUpper, controlValues.TwoStdDevLower, 2, 3));
             }
-
+            // Rule 3
             if (layout.fourOutOfFivePoints === true) {
                 points = points.concat(this.determineXOfYPointsOutOfControl(controlValues.Average, dataArray, controlValues.OneStdDevUpper, controlValues.OneStdDevLower, 4, 5));
             }
-
+            // Rule 4
             if (layout.eightInARowONSameSideOfCenter === true) {
                 points = points.concat(this. determineRunOfXPointsOutOfControl(controlValues.Average, dataArray, 8));
             }
             return points;
         },
         /*
-            This is for the first type of out of control where a point is outside of the UCL/LCL.
-
-            1) A single point outside the control limits.
-
-            Two out of three successive points are on the same side of the centerline and farther than 2 σ from it.
-            Four out of five successive points are on the same side of the centerline and farther than 1 σ from it.
-            A run of eight in a row are on the same side of the centerline. Or 10 out of 11, 12 out of 14 or 16 out of 20.
+            A single point outside the upper/lower control limits.
         */
         determineSinglePointOutOfControl : function (controlValues, dataArray) {
             "use strict";
@@ -40,20 +41,21 @@ define([], function () {
 
             for (var i = dataArrayStartIndex; i < arrayLength; i++) {
                 if (dataArray[i][styleIndex-1] < controlValues.ThreeStdDevLower) {
-                    pointsToColor.push(this.colorPointObj(i, styleIndex, false, true));
+                    pointsToColor.push(this.pointObj(i, styleIndex, false, true));
                 }
                 if (dataArray[i][styleIndex-1] > controlValues.ThreeStdDevUpper) {
-                    pointsToColor.push(this.colorPointObj(i, styleIndex, true, false));
+                    pointsToColor.push(this.pointObj(i, styleIndex, true, false));
                 }
             }
             
             return pointsToColor;
         },
         /*
-            This method is used to determine when a run of a certain number of points in a row are above the mean.
-            
-            The values are all configurable so I could do 4 out of 5 and more than 2 STD away from the mean.
-            Example Call: determineXOfYPointsOutOfControl: function (10, dataArray, 20, 0, 4, 5);
+            This method is used to determine when X of Y points are more than Z standard deviation away from the mean.
+
+            Example Call: determineXOfYPointsOutOfControl: function (10, dataArray, OneStdDevUpper, OneStdDevLower, 4, 5);
+
+            This call will look for four of five points greater than one standard deviation from the mean.
         */
         determineXOfYPointsOutOfControl: function (avgVal, dataArray, stdDevValUpper, stdDevValLower, outOfControlPointCount, outOfControlPointCountTotal) {
             "use strict";
@@ -67,23 +69,23 @@ define([], function () {
 
             for (var i = dataArrayStartIndex; i < arrayLength; i++) {
                 if (dataArray[i][styleIndex - 1] > avgVal && dataArray[i][styleIndex - 1] > stdDevValUpper) {
-                    // greater than average and further than 2 STD from it.
-                    pointsQueue.push(this.colorPointObj(i, styleIndex, true, false));
+                    // greater than average and further than Z standard deviations from the mean.
+                    pointsQueue.push(this.pointObj(i, styleIndex, true, false));
                     runningTotalUpper++;
                 }
                 else if (dataArray[i][styleIndex - 1] < avgVal && dataArray[i][styleIndex - 1] < stdDevValLower) {
-                    // less than average and further than 2 STD from it.
-                    pointsQueue.push(this.colorPointObj(i, styleIndex, false, true));
+                    // less than average and further than Z standard deviations from the mean.
+                    pointsQueue.push(this.pointObj(i, styleIndex, false, true));
                     runningTotalLower++;
                 }
                 else {
-                    pointsQueue.push(this.colorPointObj(i, styleIndex, false, false));
+                    pointsQueue.push(this.pointObj(i, styleIndex, false, false));
                 }
 
                 // Check the number of points that satisfy the rule above if x of y satisfy then push the point so that it will
                 //  be marked as OOC.
-                if (runningTotalUpper == outOfControlPointCount || runningTotalLower== outOfControlPointCount) {
-                    pointsToColor.push(this.colorPointObj(i, styleIndex, false, false));
+                if (runningTotalUpper == outOfControlPointCount || runningTotalLower == outOfControlPointCount) {
+                    pointsToColor.push(this.pointObj(i, styleIndex, false, false));
                 }
                 
                 // Pop the queue if it gets to the maximum value we are allowed to evaluate.
@@ -100,6 +102,11 @@ define([], function () {
             }
             return pointsToColor;
         },
+        /*
+            This method is used to check for runs of a certain number of points on a specific side of the mean.
+
+            Example: determineRunOfXPointsOutOfControl(10, dataArray, 8);
+        */
         determineRunOfXPointsOutOfControl: function (avgVal, dataArray, runSize) {
             "use strict";
             var arrayLength = dataArray.length;
@@ -119,7 +126,7 @@ define([], function () {
                     }
 
                     // Push the point and increment upper
-                    pointsQueue.push(this.colorPointObj(i, styleIndex, true, false));
+                    pointsQueue.push(this.pointObj(i, styleIndex, true, false));
                     runningTotalUpper++;
                 }
                 else if (dataArray[i][styleIndex - 1] < avgVal) {
@@ -130,7 +137,7 @@ define([], function () {
                     }
 
                     // Push the point and increment upper
-                    pointsQueue.push(this.colorPointObj(i, styleIndex, true, false));
+                    pointsQueue.push(this.pointObj(i, styleIndex, true, false));
                     runningTotalLower++;
                 }
                 else {
@@ -143,7 +150,7 @@ define([], function () {
                 // Check the number of points that satisfy the rule above if x of y satisfy then push the point so that it will
                 //  be marked as OOC.
                 if (runningTotalLower == runSize || runningTotalUpper == runSize) {
-                    pointsToColor.push(this.colorPointObj(i, styleIndex, false, false));
+                    pointsToColor.push(this.pointObj(i, styleIndex, false, false));
                 }
                 
                 // Pop the queue if it gets to the maximum value we are allowed to evaluate.
@@ -160,6 +167,13 @@ define([], function () {
             }
             return pointsToColor;
         },
+        /*
+            Creates json object that colors the points.
+            Supported options:
+                Point Color
+                Point Shape
+                Point Size
+        */
         colorPoints: function (dataArray, outOfControlPoints, oocPointColor, oocPointShape, oocPointSize) {
             var arrayLength = outOfControlPoints.length;
             var pointStyle = "point { fill-color: " + oocPointColor + "; shape-type: " + oocPointShape + "; size: " + oocPointSize + "; }";
@@ -167,7 +181,10 @@ define([], function () {
                 dataArray[outOfControlPoints[i].dataIndex][outOfControlPoints[i].styleIndex] = pointStyle;
             }
         },
-        colorPointObj: function (dataIndexVal, styleIndexVal, oocUpper, oocLower) {
+        /*
+            OOC 
+        */
+        pointObj: function (dataIndexVal, styleIndexVal, oocUpper, oocLower) {
             return {
                 dataIndex: dataIndexVal,
                 styleIndex: styleIndexVal,

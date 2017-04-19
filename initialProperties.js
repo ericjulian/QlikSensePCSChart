@@ -1,10 +1,6 @@
 /*global define */
 
 /*
-	Use ESLint for syntax validation which is a little less rigid.
-
-	http://eslint.org/demo/
-
 	Creates two hypercubes
 
 	1) chartHyperCubeDef is for the chart and displays the data specified in the qMeasures

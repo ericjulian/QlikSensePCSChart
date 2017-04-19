@@ -3,10 +3,6 @@
 /*eslint-disable no-console*/
 
 /*
-	Use ESLint for syntax validation which is a little less rigid.
-
-	http://eslint.org/demo/
-
 	Known Linting issues which should not impact execution
 	175:34 - 'e' is defined but never used. (no-unused-vars)
 
@@ -17,7 +13,7 @@
 		One out of control point shape setting.
 
 	Enhancements
-		Add code to dynamically set the width/height of the chart.
+		- Move certain properties out into the interface to make more interactive.
 */
 
 define( ["qlik", "text!./template.html", "./properties", "./initialProperties", "./outOfControlSignals", "//www.gstatic.com/charts/loader.js"],
@@ -25,7 +21,7 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 		"use strict";
 		/*
 			These are important console debug statements.  If there are JavaScript errors in either of these files the extension will not render.
-			These variables will be undefined if there is a JavaScript error.  Use JSLint to find the JavaScript error.
+			These variables will be undefined if there is a JavaScript error.  Use ESLint to find the JavaScript error.
 
 			console.info(propertiesPanel);
 			console.info(initProperties);
@@ -40,6 +36,11 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 				snapshot: true,
 				export: true,
 				exportData: false
+			},
+			resize: function($element, layout) {
+				console.info("resize fired");
+				console.info(this.$scope);
+				this.$scope.drawGoogleChart();
 			},
 			controller: ["$scope", function ( $scope ) {
 				console.info("controller fired ");
@@ -61,21 +62,28 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 				// Create the hypercube that will calculate the stddev/average
 				var controlCubeDef = initProperties.setControlCubeField(initProperties.controlLevelCubeDef, $scope.layout.controlField, dimensionField);
 
+				// Major grid line display flag
+				var majorGridLineDisplay = $scope.layout.displayMajorGridLines ? "#cccccc" : "transparent"
+
 				// Load the Visualization API and the corechart package.
 				google.charts.load("current", {"packages":["corechart"]});
+
+				$scope.drawGoogleChart = function() {
+					drawChart($scope, outOfControlSignals, controlValues, majorGridLineDisplay, yMinorTicks, viewportDims);
+				};
 
 				app.createCube( controlCubeDef, function ( reply ) {
 					console.info("createCube fired");
 					$scope.controlCubeDef = reply;
 					controlValues = createControlValues($scope.layout, $scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][1].qNum, $scope.controlCubeDef .qHyperCube.qDataPages[0].qMatrix[0][0].qNum);
-					yMinorTicks = setTicks($scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][1].qNum, $scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][0].qNum);
+					yMinorTicks = setTicks($scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][1].qNum, $scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][0].qNum, $scope.layout.displayOneAndTwoStdDev);
 					viewportDims = getMinMaxDataRange(controlValues, $scope.layout.qHyperCube);
 					
 					/*
 						Set a callback to run when the Google Visualization API is loaded.
 						This sets the function that loads the chart initially.
 					*/
-					google.charts.setOnLoadCallback(drawChart);
+					google.charts.setOnLoadCallback($scope.drawGoogleChart);
 				});
 
 				/*
@@ -83,128 +91,13 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 					Calls drawChart when Validated event is fired.
 				*/
 				$scope.component.model.Validated.bind(function(){
-					drawChart();
+					console.info("model validated fired")
+					$scope.drawGoogleChart();
 				});
-		
-				/*
-					Google charts does not understand how to interpret a qHyperCube object.  
-					We need to convert it to something it understands and in this case that is a DataTable.
-					
-					Function does the following:
-						Creates and populates a data table.
-						Instantiates the pie chart
-						Passes in the data
-						Renders the chart
-				*/
-				function drawChart() {
-					console.info("drawChart fired");
-					var measureCount = $scope.layout.qHyperCube.qMeasureInfo.length;
-					
-					// Create and define the data table.
-					var dataDef = createDataDef($scope.layout.qHyperCube);
-					var firstDataRow = dataDef.firstDataRowDef;
-					
-					/*
-						Create the series information for the measures.
-						Series options contain style information for a measure.
-
-						console.info('seriesOptions', seriesOptions);
-					*/
-					var seriesOptions = createSeriesStyle(measureCount, $scope.layout.qHyperCube);
-
-					/*
-						Populate the dataArray with the information from the HyperCube.
-						console.info('dataArray',dataArray);
-					*/
-					var dataArray = [];
-					dataArray.push(firstDataRow);
-					dataArray = createDataArray(dataArray, $scope.layout.qHyperCube);
-
-					/*
-						Retrieve out of control points
-					*/
-					var outOfControlPoints = outOfControlSignals.getOutOfControlPoints($scope.layout, controlValues, dataArray);
-
-					/*
-						Color out of control points
-					*/
-					outOfControlSignals.colorPoints (dataArray, outOfControlPoints, controlValues.OOCPointColor, controlValues.OOCPointShape, controlValues.OOCPointSize);
-
-					/*
-						Convert the dataArray to a dataTable consumable by Google Charts.
-					*/
-					var dataTableData = google.visualization.arrayToDataTable(dataArray);
-
-					/* 
-						Set chart options
-						It is important to set the width/height values for the chart and the chart area.
-					*/
-					var options = {
-						chartArea:{
-							width: "90%",
-						},
-						series: seriesOptions,
-						vAxes: {
-							0: { 
-							},
-							1: {
-								ticks: yMinorTicks,
-								gridlines: {
-									color: $scope.layout.minorGridlineColor,
-									count: 7
-								}
-							}
-						},
-						vAxis: {
-							viewWindow: {
-								min: viewportDims.minVal,
-								max: viewportDims.maxVal
-							}
-						}
-					};
-					
-					// Set Curve smoothing 
-					if ($scope.layout.curveSmoothing) {
-						options.curveType = "function";
-					}
-				
-					/* 
-						Instantiate and draw chart with defined options.
-					*/
-					var chart = new google.visualization.LineChart(document.getElementById("chart_div"));
-					chart.draw(dataTableData, options);
-
-					/*
-						Add select event listener to the google visualization.  
-						Adding the listener will cause chartSelectHandler to fire when the chart is clicked.
-					*/
-					google.visualization.events.addListener(chart, "select", chartSelectHandler);
-					
-					/*
-						Function that is called when the google chart select event fires.
-						Here we grab the selected chart value and add it to the list of selected countries.
-						Adding the value to the field causes the HyperCube Validated event to fire.
-					*/
-					function chartSelectHandler(e) {
-						console.info("chart select fired");
-						var item = chart.getSelection();
-						var selectedVal = dataTableData.getFormattedValue(item[0].row, 0);
-						app.field(dimensionField).selectValues([{qText:selectedVal}], false, false);
-					}
-
-					/*
-						Set template.html variables
-					*/
-					$scope.meanValue = (controlValues.Average).toFixed(2);
-					$scope.stdDevValue = controlValues.StdDev.toFixed(2);
-					$scope.uclValue = controlValues.ThreeStdDevUpper.toFixed(2);
-					$scope.lclValue = controlValues.ThreeStdDevLower.toFixed(2);
-
-					console.info("draw end");
-				}
 			}]
 		};
-	} );
+	}
+);
 
 function createControlValues(layout, avg, stdDev) {
 	"use strict";
@@ -224,18 +117,26 @@ function createControlValues(layout, avg, stdDev) {
 	return cv;
 }
 
-function setTicks(avg, stdDev) {
+function setTicks(avg, stdDev, showOneTwoSTDev) {
 	"use strict";
-	var ticks = [ 
-		{v: avg, f: "μ" }
-		,{v: avg - stdDev, f: "-1σ" }
-		,{v: avg + stdDev, f: "+1σ" }
-		,{v: avg - (2 * stdDev), f: "-2σ" }
-		,{v: avg + (2 * stdDev), f: "+2σ" }
-		,{v: avg - (3 * stdDev), f: "-3σ" }
-		,{v: avg + (3 * stdDev), f: "+3σ" }
-	];
-	return ticks;
+	if (showOneTwoSTDev) {
+		return [ 
+			{v: avg, f: "μ" }
+			,{v: avg - stdDev, f: "-1σ" }
+			,{v: avg + stdDev, f: "+1σ" }
+			,{v: avg - (2 * stdDev), f: "-2σ" }
+			,{v: avg + (2 * stdDev), f: "+2σ" }
+			,{v: avg - (3 * stdDev), f: "-3σ" }
+			,{v: avg + (3 * stdDev), f: "+3σ" }
+		];
+	}
+	else {
+		return [ 
+			{v: avg, f: "μ" }
+			,{v: avg - (3 * stdDev), f: "-3σ" }
+			,{v: avg + (3 * stdDev), f: "+3σ" }
+		];
+	}
 }
 
 function createSeriesStyle(measureCount, hyperCube) {
@@ -358,20 +259,12 @@ function getMinMaxDataRange(controlValues, hyperCube) {
 
 	var dataLen = hyperCube.qDataPages[0].qMatrix.length;
 	var colDataLen = 0;
-	var dataRow = [];
 	var i = 0;
 	var j = 0;
 	for (i = 0; i < dataLen; i+=1) {
 		colDataLen = hyperCube.qDataPages[0].qMatrix[i].length;
-		dataRow = [];
 		for (j = 0; j < colDataLen; j+=1) {
-			/* If qNum is "NaN" and qIsNull is true then push null. */
-			if (hyperCube.qDataPages[0].qMatrix[i][j].qNum === "NaN" && hyperCube.qDataPages[0].qMatrix[i][j].qIsNull === true) {
-			}
-			/* If qNum is "NaN" then we access qText because the value is a string.  Otherwise we access qNum for the number value. */
-			else if (hyperCube.qDataPages[0].qMatrix[i][j].qNum === "NaN") {
-			}
-			else {
+			if  (hyperCube.qDataPages[0].qMatrix[i][j].qNum !== "NaN" || hyperCube.qDataPages[0].qMatrix[i][j].qIsNull !== true) {
 				if (hyperCube.qDataPages[0].qMatrix[i][j].qNum > maxVal) {
 					maxVal = hyperCube.qDataPages[0].qMatrix[i][j].qNum;
 				}
@@ -386,4 +279,123 @@ function getMinMaxDataRange(controlValues, hyperCube) {
 		minVal: minVal,
 		maxVal: maxVal
 	}
+}
+
+/*
+	Google charts does not understand how to interpret a qHyperCube object.  
+	We need to convert it to something it understands and in this case that is a DataTable.
+	
+	Function does the following:
+		Creates and populates a data table.
+		Instantiates the pie chart
+		Passes in the data
+		Renders the chart
+*/
+function drawChart(scope, outOfControlSignals, controlValues, majorGridLineDisplay, yMinorTicks, viewportDims) {
+	console.info("drawChart fired");
+
+	var measureCount = scope.layout.qHyperCube.qMeasureInfo.length;
+	
+	// Create and define the data table.
+	var dataDef = createDataDef(scope.layout.qHyperCube);
+	var firstDataRow = dataDef.firstDataRowDef;
+	
+	/*
+		Create the series information for the measures.
+		Series options contain style information for a measure.
+
+		console.info('seriesOptions', seriesOptions);
+	*/
+	var seriesOptions = createSeriesStyle(measureCount, scope.layout.qHyperCube);
+
+	/*
+		Populate the dataArray with the information from the HyperCube.
+		console.info('dataArray',dataArray);
+	*/
+	var dataArray = [];
+	dataArray.push(firstDataRow);
+	dataArray = createDataArray(dataArray, scope.layout.qHyperCube);
+
+	/*
+		Retrieve out of control points
+	*/
+	var outOfControlPoints = outOfControlSignals.getOutOfControlPoints(scope.layout, controlValues, dataArray);
+
+	/*
+		Color out of control points
+	*/
+	outOfControlSignals.colorPoints (dataArray, outOfControlPoints, controlValues.OOCPointColor, controlValues.OOCPointShape, controlValues.OOCPointSize);
+
+	/*
+		Convert the dataArray to a dataTable consumable by Google Charts.
+	*/
+	var dataTableData = google.visualization.arrayToDataTable(dataArray);
+
+	/* 
+		Set chart options
+		It is important to set the width/height values for the chart and the chart area.
+	*/
+	var options = {
+		chartArea:{
+			width: "90%",
+		},
+		series: seriesOptions,
+		vAxes: {
+			0: { 
+				gridlines: {
+					color: majorGridLineDisplay
+				}
+			},
+			1: {
+				ticks: yMinorTicks,
+				gridlines: {
+					color: scope.layout.minorGridlineColor,
+					count: 7
+				}
+			}
+		},
+		vAxis: {
+			viewWindow: {
+				min: viewportDims.minVal,
+				max: viewportDims.maxVal
+			}
+		}
+	};
+	
+	// Set Curve smoothing 
+	if (scope.layout.curveSmoothing) {
+		options.curveType = "function";
+	}
+
+	/* 
+		Instantiate and draw chart with defined options.
+	*/
+	var chart = new google.visualization.LineChart(document.getElementById("chart_div"));
+	chart.draw(dataTableData, options);
+
+	/*
+		Add select event listener to the google visualization.  
+		Adding the listener will cause chartSelectHandler to fire when the chart is clicked.
+	*/
+	google.visualization.events.addListener(chart, "select", chartSelectHandler);
+	
+	/*
+		Function that is called when the google chart select event fires.
+		Here we grab the selected chart value and add it to the list of selected countries.
+		Adding the value to the field causes the HyperCube Validated event to fire.
+	*/
+	function chartSelectHandler(e) {
+		console.info("chart select fired");
+		var item = chart.getSelection();
+		var selectedVal = dataTableData.getFormattedValue(item[0].row, 0);
+		app.field(dimensionField).selectValues([{qText:selectedVal}], false, false);
+	}
+
+	/*
+		Set template.html variables
+	*/
+	scope.meanValue = (controlValues.Average).toFixed(2);
+	scope.stdDevValue = controlValues.StdDev.toFixed(2);
+	scope.uclValue = controlValues.ThreeStdDevUpper.toFixed(2);
+	scope.lclValue = controlValues.ThreeStdDevLower.toFixed(2);
 }

@@ -2,4 +2,6 @@ ProcessControlChart.qext;
 ProcessControlChart.js;
 template.html;
 properties.js;
+outOfControlSignals.js;
+propertyUtils.js;
 initialProperties.js

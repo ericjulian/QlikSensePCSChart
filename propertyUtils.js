@@ -1,10 +1,6 @@
 /*global define */
 
 /*
-	Use ESLint for syntax validation which is a little less rigid.
-
-	http://eslint.org/demo/
-
 	Creates propties used to create custom items in the properties panel.
     1) Create field
     2) Create switch

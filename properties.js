@@ -1,10 +1,6 @@
 /*global define */
 
 /* 
-	Use ESLint for syntax validation which is a little less rigid.
-
-	http://eslint.org/demo/
-	
 	Creates a custom appearenc panel which contains
 		- General chart display options
 		- Process Control Line Options
@@ -26,26 +22,23 @@ define(["./propertyUtils"], function (propUtil) {
 	pointShapeOptionsArray.push(propUtil.createOption("Star", "star"));
 	pointShapeOptionsArray.push(propUtil.createOption("Polygon", "polygon"));
 	/* General chart options */
-	var curveSmoothing = propUtil.createSwitch ("curveSmoothing", "Curve Smoothing", false);
+	var curveSmoothing = propUtil.createSwitch("curveSmoothing", "Curve Smoothing", false);
 	var controlField = propUtil.createField("controlField", "Control Field", "string", "optional","");
 	var minorGridlineColor = propUtil.createField("minorGridlineColor", "Gridline Color", "string", "optional","#999999");
-	//var displayAverage = propUtil.createSwitch ("displayAverage", "Display Average", false);
-	//var displayOneStdDev = propUtil.createSwitch ("displayOneStdDev", "Display One Std Dev", false);
-	//var displayTwoStdDev = propUtil.createSwitch ("displayTwoStdDev", "Display Two Std Dev", false);
-	//var displayThreeStdDev = propUtil.createSwitch ("displayThreeStdDev", "Display Three Std Dev", false);
+	var displayOneAndTwoStdDev = propUtil.createSwitch("displayOneAndTwoStdDev", "Display One And Two StdDev grid lines", false);
+	var displayMajorGridLines = propUtil.createSwitch("displayMajorGridLines", "Display major grid lines", false);
+
 	/* Create item panel */
 	var configItems = propUtil.createItem("items", "Chart Configuration");
 	configItems.items["ConfigCurveSmoothing"] = curveSmoothing;
 	configItems.items["ConfigControlField"] = controlField;
 	configItems.items["ConfigGridlineColorField"] = minorGridlineColor;
-	//configItems.items["ConfigDisplayAverage"] = displayAverage;
-	//configItems.items["ConfigDisplayOneStdDev"] = displayOneStdDev;
-	//configItems.items["ConfigDisplayTwoStdDev"] = displayTwoStdDev;
-	//configItems.items["ConfigDisplayThreeStdDev"] = displayThreeStdDev;
+	configItems.items["ConfigDisplayOneAndTwoStdDev"] = displayOneAndTwoStdDev;
+	configItems.items["ConfigDisplayMajorGridLines"] = displayMajorGridLines;
 
 	/* Point Options */
 	var pointShape = propUtil.createDropDown ('qDef.pointShape', "Point Shape", "string", pointShapeOptionsArray, '');
-	pointShape.defaultValue = 'circle'; // This is necessary.  There is something about the single quotes when injecting items into the measure panel.
+	pointShape.defaultValue = 'circle'; // Tis is necessary.  There is something about the single quotes when injecting items into the measure panel.
 	var pointSize = propUtil.createField('qDef.pointSize', "Point Size", "integer", "optional", 5);
 	var pointRotation = propUtil.createSwitch('qDef.pointRotation', "Point Rotation", false);
 	var pointVisible = propUtil.createSwitch('qDef.pointVisible', "Point Visibility", true);
