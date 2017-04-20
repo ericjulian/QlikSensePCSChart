@@ -1,9 +1,9 @@
 {
 	"name": "ProcessControlChart",
-	"description": "Basic empty visualization template based on angular.js",
+	"description": "Process control chart built using Google charts.",
 	"type": "visualization",
 	"version": "1.0.0",
-	"author": "",
+	"author": "Eric Julian",
 	"homepage": "",
 	"keywords": "qlik-sense, visualization",
 	"license": "",
