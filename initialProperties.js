@@ -46,7 +46,7 @@ define([], function () {
 		}
 		,setControlCubeField : function(cube, controlField, dimension) {
 			cube.qMeasures[0].qDef.qDef = cube.qMeasures[0].qDef.qDef.replace("{{controlField}}", controlField);
-			cube.qMeasures[0].qDef.qDef = cube.qMeasures[0].qDef.qDef.replace("{{dimension}}", dimension);
+			cube.qMeasures[0].qDef.qDef = cube.qMeasures[0].qDef.qDef.replace("{{dimension}}", dimension.replace("=", ""));
 			cube.qMeasures[1].qDef.qDef = cube.qMeasures[1].qDef.qDef.replace("{{controlField}}", controlField);
 			return cube;
 		}

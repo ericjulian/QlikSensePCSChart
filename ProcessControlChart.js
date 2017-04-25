@@ -13,6 +13,13 @@
 		One out of control point shape setting.
 
 	Enhancements
+		- Better handling of different types of dimensions
+			- Year
+			- Date
+			- Time
+			- Text
+			- Use qTags in qDimensinoInfo to determine integer/numeric/text/ASCII default to text
+			OR Use qDimensionType where D is discrete(string), N is numeric, and T is for timestamp
 		- Move certain properties out into the interface to make more interactive.
 */
 
@@ -39,7 +46,6 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 			},
 			resize: function($element, layout) {
 				console.info("resize fired");
-				console.info(this.$scope);
 				this.$scope.drawGoogleChart();
 			},
 			controller: ["$scope", function ( $scope ) {
@@ -78,7 +84,7 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 					controlValues = createControlValues($scope.layout, $scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][1].qNum, $scope.controlCubeDef .qHyperCube.qDataPages[0].qMatrix[0][0].qNum);
 					yMinorTicks = setTicks($scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][1].qNum, $scope.controlCubeDef.qHyperCube.qDataPages[0].qMatrix[0][0].qNum, $scope.layout.displayOneAndTwoStdDev);
 					viewportDims = getMinMaxDataRange(controlValues, $scope.layout.qHyperCube);
-					
+
 					/*
 						Set a callback to run when the Google Visualization API is loaded.
 						This sets the function that loads the chart initially.
@@ -194,14 +200,14 @@ function createSeriesStyle(measureCount, hyperCube) {
 	console.info('dataRow', dataRow);
 	Sample header array:  "Country", "Sum CDR", {'type': 'string', 'role': 'style'}, "LCL", "UCL"
 */
-function createDataDef(hyperCube) {
+function createDataDef(hyperCube, dimensionColType) {
 	"use strict";
 	var dataDef = {};
 	var firstDataRow = [];
 	var dataTable = new google.visualization.DataTable();
 
-	// Add Dimension to the data table and values to t
-	dataTable.addColumn("string", hyperCube.qDimensionInfo[0].qFallbackTitle);
+	// Add Dimension to the data table and values to 
+	dataTable.addColumn(dimensionColType, hyperCube.qDimensionInfo[0].qFallbackTitle);
 	firstDataRow.push(hyperCube.qDimensionInfo[0].qFallbackTitle);
 
 	// Add Measures to the data table.  Each measure gets an associated point style column.
@@ -218,15 +224,15 @@ function createDataDef(hyperCube) {
 	return dataDef;
 }
 
-function createDataArray(dataArray, hyperCube) {
-	"use strict";
+function createDataArray(dataArray, hyperCube, dimensionType) {
+	console.info("createDataArray fired");
+	
 	var dataLen = hyperCube.qDataPages[0].qMatrix.length;
-	var colDataLen = 0;
+	var colDataLen = hyperCube.qDimensionInfo.length + hyperCube.qMeasureInfo.length;
 	var dataRow = [];
 	var i = 0;
 	var j = 0;
 	for (i = 0; i < dataLen; i+=1) {
-		colDataLen = hyperCube.qDataPages[0].qMatrix[i].length;
 		dataRow = [];
 		for (j = 0; j < colDataLen; j+=1) {
 			/* If qNum is "NaN" and qIsNull is true then push null. */
@@ -238,7 +244,21 @@ function createDataArray(dataArray, hyperCube) {
 				dataRow.push(hyperCube.qDataPages[0].qMatrix[i][j].qText);
 			}
 			else {
-				dataRow.push(hyperCube.qDataPages[0].qMatrix[i][j].qNum);
+				if (j !== 0 ) {
+					dataRow.push(hyperCube.qDataPages[0].qMatrix[i][j].qNum);
+				}
+				else {
+					// Special handling for date formats
+					// Convert timestamp to UNIX EPOCH and then convert to milliseconds
+					// Timestamp and time are ascii/text and don't require special formatting.
+					if (dimensionType === "date") {
+						var dateMilli = (hyperCube.qDataPages[0].qMatrix[i][j].qNum - 25569) * 86400 * 1000;
+						dataRow.push(new Date(dateMilli));
+					}
+					else {
+						dataRow.push(hyperCube.qDataPages[0].qMatrix[i][j].qNum);
+					}
+				}
 			}
 		}
 
@@ -249,21 +269,23 @@ function createDataArray(dataArray, hyperCube) {
 		dataRow.push(-1000);
 		dataArray.push(dataRow);
 	}
-
+	
 	return dataArray;
 }
-
+/*
+	Retrieves the min max values using data from the hypercube as well as the
+	control values.  This is used to generat the viewport for the chart.
+*/
 function getMinMaxDataRange(controlValues, hyperCube) {
 	var maxVal = controlValues.ThreeStdDevUpper;
 	var minVal = controlValues.ThreeStdDevLower;
-
+	var dimensionNum = hyperCube.qDimensionInfo.length;
 	var dataLen = hyperCube.qDataPages[0].qMatrix.length;
-	var colDataLen = 0;
+	var colDataLen = hyperCube.qDimensionInfo.length + hyperCube.qMeasureInfo.length
 	var i = 0;
 	var j = 0;
 	for (i = 0; i < dataLen; i+=1) {
-		colDataLen = hyperCube.qDataPages[0].qMatrix[i].length;
-		for (j = 0; j < colDataLen; j+=1) {
+		for (j = dimensionNum; j < colDataLen; j+=1) {
 			if  (hyperCube.qDataPages[0].qMatrix[i][j].qNum !== "NaN" || hyperCube.qDataPages[0].qMatrix[i][j].qIsNull !== true) {
 				if (hyperCube.qDataPages[0].qMatrix[i][j].qNum > maxVal) {
 					maxVal = hyperCube.qDataPages[0].qMatrix[i][j].qNum;
@@ -296,8 +318,11 @@ function drawChart(scope, outOfControlSignals, controlValues, majorGridLineDispl
 
 	var measureCount = scope.layout.qHyperCube.qMeasureInfo.length;
 	
+	// Dimension display type
+	var dimensionInfo = determineDimensionInfo(scope.layout.qHyperCube.qDimensionInfo[0]);
+
 	// Create and define the data table.
-	var dataDef = createDataDef(scope.layout.qHyperCube);
+	var dataDef = createDataDef(scope.layout.qHyperCube, dimensionInfo.dataTableColType);
 	var firstDataRow = dataDef.firstDataRowDef;
 	
 	/*
@@ -314,7 +339,7 @@ function drawChart(scope, outOfControlSignals, controlValues, majorGridLineDispl
 	*/
 	var dataArray = [];
 	dataArray.push(firstDataRow);
-	dataArray = createDataArray(dataArray, scope.layout.qHyperCube);
+	dataArray = createDataArray(dataArray, scope.layout.qHyperCube, dimensionInfo.dataTableColType);
 
 	/*
 		Retrieve out of control points
@@ -330,7 +355,7 @@ function drawChart(scope, outOfControlSignals, controlValues, majorGridLineDispl
 		Convert the dataArray to a dataTable consumable by Google Charts.
 	*/
 	var dataTableData = google.visualization.arrayToDataTable(dataArray);
-
+	console.info("data table created");
 	/* 
 		Set chart options
 		It is important to set the width/height values for the chart and the chart area.
@@ -359,7 +384,8 @@ function drawChart(scope, outOfControlSignals, controlValues, majorGridLineDispl
 				min: viewportDims.minVal,
 				max: viewportDims.maxVal
 			}
-		}
+		},
+		hAxis: dimensionInfo.labelFormat
 	};
 	
 	// Set Curve smoothing 
@@ -398,4 +424,44 @@ function drawChart(scope, outOfControlSignals, controlValues, majorGridLineDispl
 	scope.stdDevValue = controlValues.StdDev.toFixed(2);
 	scope.uclValue = controlValues.ThreeStdDevUpper.toFixed(2);
 	scope.lclValue = controlValues.ThreeStdDevLower.toFixed(2);
+}
+/*
+	Not mapping all fields to data table types because datetime and timeofday come back as text types.3
+
+	{format:'#,###%'}
+    {format: 'none'}: displays numbers with no formatting (e.g., 8000000)
+    {format: 'decimal'}: displays numbers with thousands separators (e.g., 8,000,000)
+    {format: 'scientific'}: displays numbers in scientific notation (e.g., 8e6)
+    {format: 'currency'}: displays numbers in the local currency (e.g., $8,000,000.00)
+    {format: 'percent'}: displays numbers as percentages (e.g., 800,000,000%)
+    {format: 'short'}: displays abbreviated numbers (e.g., 8M)
+    {format: 'long'}: displays numbers as full words (e.g., 8 million)
+
+	AddColumn DataTable supported types
+	'string', 'number', 'boolean', 'date', 'datetime', and 'timeofday'.
+*/
+function determineDimensionInfo(dimInfo) {
+	var dimType = dimInfo.qDimensionType;
+	var dimTagsArray = dimInfo.qTags;
+	var dimDecimalPlaces = dimInfo.qNumFormat.qnDec;
+	var format = {format: 'none'};
+	var columnType = "string";
+	
+	if (dimTagsArray.indexOf("$date") >= 0) {
+		format = {format: 'M/d/yy'};
+		columnType = "date";
+	}
+	else if (dimTagsArray.indexOf("$integer") >= 0) {
+		format = {format: '#'};
+		columnType = "number";
+	}
+	else if (dimTagsArray.indexOf("$numeric") >= 0) {
+		format = {format: 'decimal'};
+		columnType = "number";
+	}
+
+	return {
+		labelFormat: format,
+		dataTableColType: columnType
+	};
 }
