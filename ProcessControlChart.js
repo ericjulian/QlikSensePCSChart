@@ -6,34 +6,13 @@
 	Known Linting issues which should not impact execution
 	175:34 - 'e' is defined but never used. (no-unused-vars)
 
-	These changes have been made but haven't been tested so you could look into this functionality and 
-	fix the problem if it exists.
-		Put these options under the out of control points section
-		One out of control point color setting.
-		One out of control point shape setting.
-
 	Enhancements
-		- Better handling of different types of dimensions
-			- Year
-			- Date
-			- Time
-			- Text
-			- Use qTags in qDimensinoInfo to determine integer/numeric/text/ASCII default to text
-			OR Use qDimensionType where D is discrete(string), N is numeric, and T is for timestamp
 		- Move certain properties out into the interface to make more interactive.
 */
 
 define( ["qlik", "text!./template.html", "./properties", "./initialProperties", "./outOfControlSignals", "//www.gstatic.com/charts/loader.js"],
 	function (qlik, htmlTemplate, propertiesPanel, initProperties, outOfControlSignals) {
 		"use strict";
-		/*
-			These are important console debug statements.  If there are JavaScript errors in either of these files the extension will not render.
-			These variables will be undefined if there is a JavaScript error.  Use ESLint to find the JavaScript error.
-
-			console.info(propertiesPanel);
-			console.info(initProperties);
-			console.info(outOfControlSignals);
-		*/
 
 		return {
 			definition: propertiesPanel, /* Set the panel configuration */
@@ -49,7 +28,7 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 				this.$scope.drawGoogleChart();
 			},
 			controller: ["$scope", function ( $scope ) {
-				console.info("controller fired ");
+				console.info("controller fired");
 
 				var app = qlik.currApp();
 
@@ -105,6 +84,9 @@ define( ["qlik", "text!./template.html", "./properties", "./initialProperties", 
 	}
 );
 
+/*
+	Sets the control chart values and style information
+*/
 function createControlValues(layout, avg, stdDev) {
 	"use strict";
 	var cv = {};
@@ -123,6 +105,9 @@ function createControlValues(layout, avg, stdDev) {
 	return cv;
 }
 
+/*
+	Sets the tick values and labels for the minor axis
+*/
 function setTicks(avg, stdDev, showOneTwoSTDev) {
 	"use strict";
 	if (showOneTwoSTDev) {
@@ -145,6 +130,9 @@ function setTicks(avg, stdDev, showOneTwoSTDev) {
 	}
 }
 
+/*
+	Sets the major axis styling
+*/
 function createSeriesStyle(measureCount, hyperCube) {
 	"use strict";
 	var so = {};
@@ -224,6 +212,9 @@ function createDataDef(hyperCube, dimensionColType) {
 	return dataDef;
 }
 
+/*
+	Create a data array from the hypercube
+*/
 function createDataArray(dataArray, hyperCube, dimensionType) {
 	console.info("createDataArray fired");
 	
